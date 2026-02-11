@@ -16,11 +16,12 @@ const Index = () => {
   const [selectedAttack, setSelectedAttack] = useState<CyberAttack | null>(null);
   const spawnTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Spawn initial attacks after intro
+  /* -------------------------------
+     INITIAL ATTACK SEEDING
+  --------------------------------*/
   useEffect(() => {
     if (!introComplete) return;
 
-    // Seed initial attacks
     const initial: CyberAttack[] = [];
     for (let i = 0; i < 8; i++) {
       initial.push(generateAttack());
@@ -28,7 +29,9 @@ const Index = () => {
     setAttacks(initial);
   }, [introComplete]);
 
-  // Continuous attack spawning
+  /* -------------------------------
+     CONTINUOUS NORMAL ATTACK SPAWN
+  --------------------------------*/
   useEffect(() => {
     if (!introComplete) return;
 
@@ -36,14 +39,22 @@ const Index = () => {
       setAttacks((prev) => {
         const newAttack = generateAttack();
         const updated = [...prev, newAttack];
-        return updated.length > MAX_ATTACKS ? updated.slice(-MAX_ATTACKS) : updated;
+        return updated.length > MAX_ATTACKS
+          ? updated.slice(-MAX_ATTACKS)
+          : updated;
       });
 
-      const delay = SPAWN_INTERVAL_MIN + Math.random() * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN);
+      const delay =
+        SPAWN_INTERVAL_MIN +
+        Math.random() * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN);
+
       spawnTimerRef.current = setTimeout(spawnNext, delay);
     };
 
-    const delay = SPAWN_INTERVAL_MIN + Math.random() * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN);
+    const delay =
+      SPAWN_INTERVAL_MIN +
+      Math.random() * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN);
+
     spawnTimerRef.current = setTimeout(spawnNext, delay);
 
     return () => {
@@ -51,6 +62,58 @@ const Index = () => {
     };
   }, [introComplete]);
 
+  /* -------------------------------
+     AI ANOMALY DETECTION INTEGRATION
+     (Isolation Forest Backend)
+  --------------------------------*/
+  useEffect(() => {
+    if (!introComplete) return;
+
+    const checkForAnomaly = async () => {
+      try {
+        // Fake suspicious feature vector for demo
+        const suspiciousFeatures = new Array(78).fill(100000);
+
+        const res = await fetch("http://localhost:8000/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ features: suspiciousFeatures })
+        });
+
+        const data = await res.json();
+
+        if (data.status === "ANOMALY") {
+          const anomalyAttack = generateAttack();
+
+          setAttacks(prev => {
+            const updated = [...prev, anomalyAttack];
+            return updated.length > MAX_ATTACKS
+              ? updated.slice(-MAX_ATTACKS)
+              : updated;
+          });
+
+          // Auto-open Intelligence Panel
+          setSelectedAttack(anomalyAttack);
+
+          console.log("🚨 AI DETECTED ANOMALY | Score:", data.score);
+        }
+      } catch (err) {
+        console.error("Anomaly detection failed:", err);
+      }
+    };
+
+    // Check every 10 seconds (clean demo timing)
+    const interval = setInterval(checkForAnomaly, 10000);
+
+    return () => clearInterval(interval);
+
+  }, [introComplete]);
+
+  /* -------------------------------
+     HANDLERS
+  --------------------------------*/
   const handleAttackClick = useCallback((attack: CyberAttack) => {
     setSelectedAttack(attack);
   }, []);
@@ -63,12 +126,15 @@ const Index = () => {
     setIntroComplete(true);
   }, []);
 
+  /* -------------------------------
+     UI RENDER
+  --------------------------------*/
   return (
     <div className="bg-background text-foreground">
       {/* Cinematic Intro */}
       <IntroOverlay onComplete={handleIntroComplete} />
 
-      {/* Globe Hero Section */}
+      {/* Globe Section */}
       <section className="h-screen w-full relative overflow-hidden">
         <GlobeCanvas
           attacks={attacks}
@@ -78,10 +144,16 @@ const Index = () => {
         />
 
         {/* HUD Overlay */}
-        <HudOverlay visible={introComplete} attackCount={attacks.length} />
+        <HudOverlay
+          visible={introComplete}
+          attackCount={attacks.length}
+        />
 
         {/* Intelligence Panel */}
-        <IntelligencePanel attack={selectedAttack} onClose={handleClosePanel} />
+        <IntelligencePanel
+          attack={selectedAttack}
+          onClose={handleClosePanel}
+        />
       </section>
 
       {/* Feature Sections */}
